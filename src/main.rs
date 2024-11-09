@@ -1,16 +1,15 @@
 #![no_main]
 
-use anyhow::{bail, Result};
-use config::HomeAssistantConfig;
-use embedded_svc::http::{client::Client, Method};
+use anyhow::Result;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     hal::{delay::Delay, prelude::Peripherals},
-    http::client::{Configuration, EspHttpConnection},
-    sys::EspError,
-    wifi::{self, BlockingWifi, ClientConfiguration, EspWifi},
 };
 use log::info;
+use wifi::Wifi;
+
+mod homeassistant;
+mod wifi;
 
 #[no_mangle]
 fn main() -> Result<()> {
@@ -22,27 +21,32 @@ fn main() -> Result<()> {
     let peripherals = Peripherals::take().unwrap();
     let sysloop = EspSystemEventLoop::take()?;
 
-    // Connect to the Wi-Fi network
-    let mut esp_wifi = EspWifi::new(peripherals.modem, sysloop.clone(), None)?;
-    let mut wifi = BlockingWifi::wrap(&mut esp_wifi, sysloop.clone())?;
+    let mut wifi = wifi::Wifi::new(peripherals.modem, sysloop.clone())?;
     info!("Starting wifi");
     wifi.start()?;
 
     main_loop(config, &mut wifi);
 }
 
-fn main_loop(config: config::Config, wifi: &mut BlockingWifi<&mut EspWifi<'_>>) -> ! {
+fn main_loop(config: config::Config, wifi: &mut Wifi) -> ! {
     let delay = Delay::new_default();
+
     for network in config.networks.iter().cycle() {
-        if let Err(e) = try_connect_wifi(wifi, network) {
+        if let Err(e) = wifi.try_connect(network) {
             info!("Failed to connect to wifi: {}", e);
             delay.delay_ms(1000);
             continue;
         }
 
         loop {
-            match get_location(&config.home_assistant_config) {
-                Ok(s) => info!("{}", s.state),
+            match homeassistant::StateSnapshot::get(&config.home_assistant_config) {
+                Ok(s) => match update(&config, s) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        info!("Failed to run update: {}", e);
+                        break;
+                    }
+                },
                 Err(e) => {
                     info!("Failed to fetch HA state: {}", e);
                     break;
@@ -54,72 +58,14 @@ fn main_loop(config: config::Config, wifi: &mut BlockingWifi<&mut EspWifi<'_>>) 
     panic!("No network config provided")
 }
 
-fn try_connect_wifi(
-    wifi: &mut BlockingWifi<&mut EspWifi<'_>>,
-    network: &config::WifiNetwork,
-) -> std::result::Result<(), EspError> {
-    // Start fresh if already connected.
-    if wifi.is_connected()? {
-        info!("Already connected, disconnecting");
-        let _ = wifi.disconnect();
-    }
-
-    info!("Attempting connection to WiFi SSID '{}'", network.ssid);
-    wifi.set_configuration(&wifi::Configuration::Client(ClientConfiguration {
-        ssid: network
-            .ssid
-            .parse()
-            .expect("Could not parse the given SSID into WiFi config"),
-        password: network
-            .password
-            .parse()
-            .expect("Could not parse the given password into WiFi config"),
-        channel: None, // Autodiscover the channel
-        auth_method: network.auth_method,
-        ..Default::default()
-    }))?;
-    wifi.connect()?;
-    wifi.wait_netif_up()?;
-    let ip_info = wifi.wifi().sta_netif().get_ip_info()?;
-    info!("Wifi DHCP info: {:?}", ip_info);
-    Ok(())
-}
-
-#[derive(serde::Deserialize, Debug)]
-struct HAPersonStateResponse {
-    state: String,
-}
-
-fn get_location(ha_config: &HomeAssistantConfig) -> Result<HAPersonStateResponse> {
-    let connection = EspHttpConnection::new(&Configuration {
-        use_global_ca_store: true,
-        crt_bundle_attach: Some(esp_idf_svc::sys::esp_crt_bundle_attach),
-        ..Default::default()
-    })?;
-    let mut client = Client::wrap(connection);
-
-    let auth_header = format!("Bearer {}", ha_config.access_token);
-    let headers = [
-        ("content-type", "application/json"),
-        ("Authorization", &auth_header),
-    ];
-    let request_url = format!(
-        "{}/api/states/{}",
-        &ha_config.base_url, ha_config.person_entity
-    );
-    info!("Connecting to {}", request_url);
-    let request = client.request(Method::Get, &request_url, &headers)?;
-    let response = request.submit()?;
-
-    if !(200..=299).contains(&response.status()) {
-        bail!(
-            "HTTP request failed, error code {}: {}",
-            response.status(),
-            response.status_message().unwrap_or_default()
+fn update(config: &config::Config, state_snapshot: homeassistant::StateSnapshot) -> Result<()> {
+    if state_snapshot.person_location.state == config.home_assistant_config.person_entity {
+        info!("update pin");
+    } else {
+        info!(
+            "unknown location {}, no-op",
+            state_snapshot.person_location.state
         );
     }
-
-    let response = serde_json::from_reader(embedded_io_adapters::std::ToStd::new(response))?;
-
-    Ok(response)
+    Ok(())
 }
