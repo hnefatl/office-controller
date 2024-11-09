@@ -4,12 +4,16 @@ use anyhow::Result;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     hal::{delay::Delay, prelude::Peripherals},
+    nvs::EspDefaultNvsPartition,
 };
 use log::info;
 use wifi::Wifi;
 
 mod homeassistant;
 mod wifi;
+
+// Disabled until I've got NVS encryption configured, don't want to leak WiFi keys via flash.
+const USE_PERSISTENT_WIFI_STORAGE: bool = false;
 
 #[no_mangle]
 fn main() -> Result<()> {
@@ -21,7 +25,12 @@ fn main() -> Result<()> {
     let peripherals = Peripherals::take().unwrap();
     let sysloop = EspSystemEventLoop::take()?;
 
-    let mut wifi = wifi::Wifi::new(peripherals.modem, sysloop.clone())?;
+    // Allow storing wifi tuning data and keys(?) in persistent storage, for better performance.
+    let wifi_nvs = USE_PERSISTENT_WIFI_STORAGE
+        .then(EspDefaultNvsPartition::take)
+        .transpose()?;
+
+    let mut wifi = wifi::Wifi::new(peripherals.modem, sysloop.clone(), wifi_nvs)?;
     info!("Starting wifi");
     wifi.start()?;
 

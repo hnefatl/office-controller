@@ -1,6 +1,7 @@
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     hal::{modem::WifiModemPeripheral, peripheral::Peripheral},
+    nvs::EspDefaultNvsPartition,
     sys::EspError,
     wifi::{self, BlockingWifi, ClientConfiguration, EspWifi},
 };
@@ -14,11 +15,12 @@ impl Wifi<'_> {
     pub fn new<'d, M>(
         modem: impl Peripheral<P = M> + 'd,
         sysloop: EspSystemEventLoop,
+        nvs: Option<EspDefaultNvsPartition>,
     ) -> Result<Wifi<'d>, EspError>
     where
         M: WifiModemPeripheral,
     {
-        let esp_wifi = EspWifi::new(modem, sysloop.clone(), None)?;
+        let esp_wifi = EspWifi::new(modem, sysloop.clone(), nvs)?;
         let wifi = BlockingWifi::wrap(esp_wifi, sysloop.clone())?;
         Ok(Wifi { wifi })
     }
