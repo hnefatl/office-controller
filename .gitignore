@@ -1,0 +1,6 @@
+**/.embuild
+**/target
+**/Cargo.lock
+
+# Contains configuration credentials
+deployment_config.toml
