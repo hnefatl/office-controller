@@ -1,0 +1,7 @@
+{
+    "files.exclude": {
+        "**/.embuild": true,
+        "**/target": true,
+        "**/Cargo.lock": true,
+    }
+}
