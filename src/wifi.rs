@@ -75,7 +75,7 @@ pub struct WifiStatus {
     connected: Mutex<CriticalSectionRawMutex, bool>,
 }
 impl WifiStatus {
-    pub fn new() -> WifiStatus {
+    pub fn new() -> Self {
         WifiStatus {
             connected: Mutex::new(false),
         }

@@ -4,26 +4,17 @@ use embedded_svc::http::{client::Client, Method};
 use esp_idf_svc::http::client::{Configuration, EspHttpConnection};
 use log::info;
 
-pub struct StateSnapshot {
-    pub person_location: EntityState,
-}
-impl StateSnapshot {
-    pub fn get(ha_config: &HomeAssistantConfig) -> Result<StateSnapshot> {
-        let person_location = get_entity_state(ha_config, &ha_config.person_entity)?;
-        Ok(StateSnapshot { person_location })
-    }
-}
-
 /// Generic state struct that only captures the state, no other fields of interest.
+/// More complex structs can be defined for entities with more interesting fields.
 #[derive(serde::Deserialize, Debug)]
 pub struct EntityState {
     pub state: String,
 }
 
-pub fn get_entity_state<State: serde::de::DeserializeOwned>(
+pub fn get_entity_state<S: serde::de::DeserializeOwned>(
     ha_config: &HomeAssistantConfig,
     entity_id: &str,
-) -> Result<State> {
+) -> Result<S> {
     let connection = EspHttpConnection::new(&Configuration {
         use_global_ca_store: true,
         crt_bundle_attach: Some(esp_idf_svc::sys::esp_crt_bundle_attach),
@@ -49,6 +40,6 @@ pub fn get_entity_state<State: serde::de::DeserializeOwned>(
         );
     }
 
-    let result: State = serde_json::from_reader(embedded_io_adapters::std::ToStd::new(response))?;
+    let result: S = serde_json::from_reader(embedded_io_adapters::std::ToStd::new(response))?;
     Ok(result)
 }

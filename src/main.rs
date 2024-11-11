@@ -1,7 +1,14 @@
-use anyhow::Result;
+use config::FlickeringGpsLed;
 use embassy_executor::{main, Spawner};
 use embassy_time::Timer;
-use esp_idf_svc::{eventloop::EspSystemEventLoop, hal::prelude::*, nvs::EspDefaultNvsPartition};
+use esp_idf_svc::{
+    eventloop::EspSystemEventLoop,
+    hal::{
+        gpio::{AnyOutputPin, PinDriver},
+        prelude::*,
+    },
+    nvs::EspDefaultNvsPartition,
+};
 use log::info;
 use std::sync::Arc;
 
@@ -36,46 +43,46 @@ async fn main(spawner: Spawner) {
         wifi_status.clone(),
         config.networks,
     ));
-    spawner.must_spawn(homeassistant_loop(
-        wifi_status.clone(),
-        config.home_assistant_config,
-    ));
+    for cfg in config.flickering_gps_leds {
+        spawner.must_spawn(flickering_gps_led_runner(
+            wifi_status.clone(),
+            config.home_assistant_config.clone(),
+            cfg.clone(),
+            // Config validation should mean we don't reuse GPIO pins.
+            unsafe { AnyOutputPin::new(cfg.gpio_pin) },
+        ));
+    }
 }
 
 #[embassy_executor::task]
-async fn homeassistant_loop(
+async fn flickering_gps_led_runner(
     wifi_status: Arc<wifi::WifiStatus>,
-    config: config::HomeAssistantConfig,
+    ha_config: config::HomeAssistantConfig,
+    led_config: FlickeringGpsLed,
+    pin: AnyOutputPin,
 ) -> ! {
+    let mut led = PinDriver::output(pin).unwrap();
     loop {
+        // TODO: make a generic "loop callable while wifi connected" wrapper? will require 'static callables
         wifi_status.wait_until_connected().await;
 
-        match homeassistant::StateSnapshot::get(&config) {
-            Ok(s) => match update(&config, s) {
-                Ok(_) => {}
-                Err(e) => {
-                    info!("Failed to run update: {}", e);
-                }
-            },
+        match homeassistant::get_entity_state::<homeassistant::EntityState>(
+            &ha_config,
+            &led_config.entity,
+        ) {
+            Ok(s) => {
+                let in_zone = s.state == led_config.gps_zone;
+                info!(
+                    "Entity '{}' in zone '{}': {}",
+                    led_config.entity, led_config.gps_zone, in_zone
+                );
+                // TODO: flicker
+                led.set_level(in_zone.into()).unwrap();
+            }
             Err(e) => {
                 info!("Failed to fetch HA state: {}", e);
             }
         }
         Timer::after_secs(5).await;
     }
-}
-
-fn update(
-    config: &config::HomeAssistantConfig,
-    state_snapshot: homeassistant::StateSnapshot,
-) -> Result<()> {
-    if state_snapshot.person_location.state == config.person_entity {
-        info!("update pin");
-    } else {
-        info!(
-            "unknown location {}, no-op",
-            state_snapshot.person_location.state
-        );
-    }
-    Ok(())
 }

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0"
 embedded-svc = { version = "0.28", features = ["use_serde"] }
 serde = "1.0"
 toml = "0.8"
