@@ -41,7 +41,7 @@ async fn main(spawner: Spawner) {
         sysloop.clone(),
         wifi_nvs,
         wifi_status.clone(),
-        config.networks.into(),
+        config.networks,
     ));
     for cfg in config.flickering_gps_leds {
         spawner.must_spawn(flickering_gps_led_runner(

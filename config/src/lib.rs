@@ -1,13 +1,13 @@
 use anyhow::{bail, Result};
 use embedded_svc::wifi::AuthMethod;
-use nonempty::NonEmpty;
 use serde::Deserialize;
 use std::collections::HashSet;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
-    pub networks: NonEmpty<WifiNetwork>,
+    pub networks: Vec<WifiNetwork>,
     pub home_assistant_config: HomeAssistantConfig,
+    #[serde(default)]
     pub flickering_gps_leds: Vec<FlickeringGpsLed>,
 }
 impl Config {
