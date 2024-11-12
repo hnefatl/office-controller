@@ -1,10 +1,10 @@
 use config::FlickeringGpsLed;
 use embassy_executor::{main, Spawner};
-use embassy_time::Timer;
+use embassy_time::{Duration, Timer};
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     hal::{
-        gpio::{AnyOutputPin, PinDriver},
+        gpio::{AnyOutputPin, Output, PinDriver},
         prelude::*,
     },
     nvs::EspDefaultNvsPartition,
@@ -44,45 +44,65 @@ async fn main(spawner: Spawner) {
         config.networks,
     ));
     for cfg in config.flickering_gps_leds {
-        spawner.must_spawn(flickering_gps_led_runner(
-            wifi_status.clone(),
-            config.home_assistant_config.clone(),
-            cfg.clone(),
-            // Config validation should mean we don't reuse GPIO pins.
-            unsafe { AnyOutputPin::new(cfg.gpio_pin) },
-        ));
+        // Config validation should mean we don't reuse GPIO pins.
+        let pin = unsafe { AnyOutputPin::new(cfg.gpio_pin) };
+        let task = FlickeringGpsLedTask {
+            ha_config: config.home_assistant_config.clone(),
+            led_config: cfg.clone(),
+            led: PinDriver::output(pin).unwrap(),
+        };
+        spawner.must_spawn(flickering_gps_led_runner(wifi_status.clone(), task));
     }
 }
 
-#[embassy_executor::task]
-async fn flickering_gps_led_runner(
-    wifi_status: Arc<wifi::WifiStatus>,
+trait WithWifiTask {
+    fn get_sleep_duration(&self) -> Duration;
+    async fn run(&mut self) -> anyhow::Result<()>;
+
+    async fn loop_when_wifi(&mut self, wifi_status: Arc<wifi::WifiStatus>) -> ! {
+        loop {
+            wifi_status.wait_until_connected().await;
+            self.run().await.unwrap();
+            Timer::after(self.get_sleep_duration()).await;
+        }
+    }
+}
+
+struct FlickeringGpsLedTask<'a> {
     ha_config: config::HomeAssistantConfig,
     led_config: FlickeringGpsLed,
-    pin: AnyOutputPin,
-) -> ! {
-    let mut led = PinDriver::output(pin).unwrap();
-    loop {
-        // TODO: make a generic "loop callable while wifi connected" wrapper? will require 'static callables
-        wifi_status.wait_until_connected().await;
+    led: PinDriver<'a, AnyOutputPin, Output>,
+}
+impl<'a> WithWifiTask for FlickeringGpsLedTask<'a> {
+    fn get_sleep_duration(&self) -> Duration {
+        Duration::from_secs(5)
+    }
 
+    async fn run(&mut self) -> anyhow::Result<()> {
         match homeassistant::get_entity_state::<homeassistant::EntityState>(
-            &ha_config,
-            &led_config.entity,
+            &self.ha_config,
+            &self.led_config.entity,
         ) {
             Ok(s) => {
-                let in_zone = s.state == led_config.gps_zone;
+                let in_zone = s.state == self.led_config.gps_zone;
                 info!(
                     "Entity '{}' in zone '{}': {}",
-                    led_config.entity, led_config.gps_zone, in_zone
+                    self.led_config.entity, self.led_config.gps_zone, in_zone
                 );
                 // TODO: flicker
-                led.set_level(in_zone.into()).unwrap();
+                self.led.set_level(in_zone.into()).unwrap();
             }
             Err(e) => {
                 info!("Failed to fetch HA state: {}", e);
             }
         }
-        Timer::after_secs(5).await;
+        Ok(())
     }
+}
+#[embassy_executor::task]
+async fn flickering_gps_led_runner(
+    wifi_status: Arc<wifi::WifiStatus>,
+    mut task: FlickeringGpsLedTask<'static>,
+) -> ! {
+    task.loop_when_wifi(wifi_status).await
 }
