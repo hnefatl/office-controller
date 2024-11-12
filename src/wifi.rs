@@ -8,7 +8,7 @@ use esp_idf_svc::{
     timer::EspTaskTimerService,
     wifi::{self, AsyncWifi, ClientConfiguration, EspWifi},
 };
-use log::info;
+use log::{error, info, warn};
 use std::sync::Arc;
 
 #[embassy_executor::task]
@@ -26,7 +26,7 @@ pub async fn repeatedly_connect_to_wifi(
     wifi.start().await.unwrap();
     for network in networks.iter().cycle() {
         if let Err(e) = try_connect(&mut wifi, network).await {
-            info!("Failed to connect to wifi: {}", e);
+            warn!("Failed to connect to wifi: {}", e);
             Timer::after(Duration::from_secs(1)).await;
             continue;
         }
@@ -35,7 +35,7 @@ pub async fn repeatedly_connect_to_wifi(
         status.set_connected(true).await;
         wifi.wifi_wait(|w| w.is_connected(), None).await.unwrap();
         status.set_connected(false).await;
-        info!("Disconnected");
+        error!("Disconnected from wifi");
     }
     panic!("No network config provided")
 }
@@ -46,7 +46,7 @@ async fn try_connect(
 ) -> std::result::Result<(), EspError> {
     // Start fresh if already connected.
     if wifi.is_connected()? {
-        info!("Already connected, disconnecting");
+        warn!("Already connected, disconnecting");
         let _ = wifi.disconnect().await;
     }
 

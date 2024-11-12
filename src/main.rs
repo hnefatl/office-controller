@@ -9,7 +9,7 @@ use esp_idf_svc::{
     },
     nvs::EspDefaultNvsPartition,
 };
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
 use wifi::WithWifiTask;
 
@@ -81,7 +81,7 @@ impl<'a> WithWifiTask for FlickeringGpsLedTask<'a> {
                 self.led.set_level(in_zone.into()).unwrap();
             }
             Err(e) => {
-                info!("Failed to fetch HA state: {}", e);
+                error!("Failed to fetch HA state: {}", e);
             }
         }
         Ok(())
