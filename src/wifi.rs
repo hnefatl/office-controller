@@ -71,6 +71,19 @@ async fn try_connect(
     Ok(())
 }
 
+pub trait WithWifiTask {
+    fn get_sleep_duration(&self) -> Duration;
+    async fn run(&mut self) -> anyhow::Result<()>;
+
+    async fn loop_when_wifi(&mut self, wifi_status: Arc<WifiStatus>) -> ! {
+        loop {
+            wifi_status.wait_until_connected().await;
+            self.run().await.unwrap();
+            Timer::after(self.get_sleep_duration()).await;
+        }
+    }
+}
+
 pub struct WifiStatus {
     connected: Mutex<CriticalSectionRawMutex, bool>,
 }
@@ -85,7 +98,7 @@ impl WifiStatus {
     /// that it's still set at any point afterwards.
     /// Intended to act as a soft block of "if we're clearly disconnected, don't do anything until
     /// we're connected again".
-    pub async fn wait_until_connected(&self) {
+    async fn wait_until_connected(&self) {
         while !*self.connected.lock().await {
             // Polling is ugly but simple. The embassy sync primitives require knowing at compile-time
             // how many tasks can wait at once, and that's more annoying to calculate and pass around

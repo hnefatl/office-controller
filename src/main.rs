@@ -1,6 +1,6 @@
 use config::FlickeringGpsLed;
 use embassy_executor::{main, Spawner};
-use embassy_time::{Duration, Timer};
+use embassy_time::Duration;
 use esp_idf_svc::{
     eventloop::EspSystemEventLoop,
     hal::{
@@ -11,6 +11,7 @@ use esp_idf_svc::{
 };
 use log::info;
 use std::sync::Arc;
+use wifi::WithWifiTask;
 
 mod homeassistant;
 mod wifi;
@@ -52,19 +53,6 @@ async fn main(spawner: Spawner) {
             led: PinDriver::output(pin).unwrap(),
         };
         spawner.must_spawn(flickering_gps_led_runner(wifi_status.clone(), task));
-    }
-}
-
-trait WithWifiTask {
-    fn get_sleep_duration(&self) -> Duration;
-    async fn run(&mut self) -> anyhow::Result<()>;
-
-    async fn loop_when_wifi(&mut self, wifi_status: Arc<wifi::WifiStatus>) -> ! {
-        loop {
-            wifi_status.wait_until_connected().await;
-            self.run().await.unwrap();
-            Timer::after(self.get_sleep_duration()).await;
-        }
     }
 }
 
