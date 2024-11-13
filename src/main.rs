@@ -15,6 +15,7 @@ use wifi::WithWifiTask;
 
 mod homeassistant;
 mod wifi;
+mod flicker;
 
 // Disabled until I've got NVS encryption configured, don't want to leak WiFi keys via flash.
 const USE_PERSISTENT_WIFI_STORAGE: bool = false;
@@ -56,10 +57,11 @@ async fn main(spawner: Spawner) {
     }
 }
 
-struct FlickeringGpsLedTask<'a> {
+struct FlickeringGpsLedTask<'a, 'r> {
     ha_config: config::HomeAssistantConfig,
     led_config: FlickeringGpsLed,
     led: PinDriver<'a, AnyOutputPin, Output>,
+    flicker: flicker::FlickerSequence<'r, rand::rngs::ThreadRng>
 }
 impl<'a> WithWifiTask for FlickeringGpsLedTask<'a> {
     fn get_sleep_duration(&self) -> Duration {
