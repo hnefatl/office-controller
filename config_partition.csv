@@ -1,0 +1,3 @@
+key,type,encoding,value
+config,namespace,,
+config,file,string,deployment_config.toml

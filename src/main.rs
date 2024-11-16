@@ -7,7 +7,7 @@ use esp_idf_svc::{
         gpio::{AnyOutputPin, Output, PinDriver},
         prelude::*,
     },
-    nvs::EspDefaultNvsPartition,
+    nvs::{EspCustomNvs, EspDefaultNvsPartition, EspNvsPartition, NvsCustom},
 };
 use log::{error, info};
 use std::sync::Arc;
@@ -20,12 +20,23 @@ mod flicker;
 // Disabled until I've got NVS encryption configured, don't want to leak WiFi keys via flash.
 const USE_PERSISTENT_WIFI_STORAGE: bool = false;
 
+fn load_config_or_die() -> Result<config::Config, esp_idf_svc::sys::EspError> {
+    // The namespace and config key name is from `config_partition.csv`. The partition name is from `partitions.csv`.
+    // The config itself is loaded from `deployment_config.toml`.
+    let config_partition = EspNvsPartition::<NvsCustom>::take("config")?;
+    let config_nvs = EspCustomNvs::new(config_partition, "config", false)?;
+    let config_len = config_nvs.str_len("config")?.unwrap();
+    let mut config_buffer = vec![0u8; config_len];
+    let config_text = config_nvs.get_str("config", &mut config_buffer)?.unwrap();
+    Ok(config::Config::parse_or_panic(config_text))
+}
+
 #[main]
 async fn main(spawner: Spawner) {
-    let config = config::Config::load_or_panic();
-
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
+
+    let config = load_config_or_die().unwrap();
 
     let peripherals = Peripherals::take().unwrap();
     let sysloop = EspSystemEventLoop::take().unwrap();

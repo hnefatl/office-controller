@@ -3,5 +3,6 @@
         "**/.embuild": true,
         "**/target": true,
         "**/Cargo.lock": true,
+        "esp-idf/": true,
     }
 }

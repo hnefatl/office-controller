@@ -1,6 +1,7 @@
 **/.embuild
 **/target
 **/Cargo.lock
+esp-idf/
 
 # Contains configuration credentials
 deployment_config.toml
