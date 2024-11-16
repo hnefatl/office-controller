@@ -1,3 +1,5 @@
+const CONFIG: &str = include_str!("deployment_config.toml");
+
 fn main() {
     // Only rerun this build script if these files change: avoids
     // rebuilds for binary code.
@@ -5,9 +7,8 @@ fn main() {
     println!("cargo::rerun-if-changed=Cargo.toml");
     println!("cargo::rerun-if-changed=config/");
     println!("cargo::rerun-if-changed=deployment_config.toml");
+    embuild::espidf::sysenv::output();
 
     // Verify the config can be parsed at build-time, to prevent config parsing errors at runtime.
-    config::Config::load_or_panic();
-
-    embuild::espidf::sysenv::output();
+    config::Config::parse_or_panic(CONFIG);
 }

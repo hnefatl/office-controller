@@ -11,8 +11,7 @@ pub struct Config {
     pub flickering_gps_leds: Vec<FlickeringGpsLed>,
 }
 impl Config {
-    pub fn load_or_panic() -> Self {
-        let config_text = include_str!("../../deployment_config.toml");
+    pub fn parse_or_panic(config_text: &str) -> Self {
         let cfg: Self = toml::from_str(config_text).expect("Failed to parse deployment config");
         cfg.validate().unwrap();
         return cfg;
