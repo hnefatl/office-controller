@@ -30,10 +30,17 @@ fn load_config_or_die() -> Result<config::Config, esp_idf_svc::sys::EspError> {
     Ok(config::Config::parse_or_panic(config_text))
 }
 
+fn log_stack_watermark(name: &str) {
+    // This is the least remaining stack space seen during the runtime of the task.
+    let watermark = unsafe { esp_idf_svc::sys::uxTaskGetStackHighWaterMark2(std::ptr::null_mut()) };
+    info!("Stack watermark ({}): {}", name, watermark);
+}
+
 #[main]
 async fn main(spawner: Spawner) {
     esp_idf_svc::sys::link_patches();
     esp_idf_svc::log::EspLogger::initialize_default();
+    log_stack_watermark("main");
 
     let config = load_config_or_die().unwrap();
     info!("Config: {:?}", config);
@@ -56,6 +63,7 @@ async fn main(spawner: Spawner) {
         wifi_status.clone(),
         config.networks,
     ));
+
     for cfg in config.flickering_gps_leds {
         // Config validation should mean we don't reuse GPIO pins.
         let pin = unsafe { AnyOutputPin::new(cfg.gpio_pin) };
@@ -79,6 +87,7 @@ impl<'a> WithWifiTask for FlickeringGpsLedTask<'a> {
     }
 
     async fn run(&mut self) -> anyhow::Result<()> {
+        log_stack_watermark("FlickeringGpsLedTask::run");
         match homeassistant::get_entity_state::<homeassistant::EntityState>(
             &self.ha_config,
             &self.led_config.entity,
