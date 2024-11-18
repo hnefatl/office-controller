@@ -36,6 +36,7 @@ async fn main(spawner: Spawner) {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     let config = load_config_or_die().unwrap();
+    info!("Config: {:?}", config);
 
     let peripherals = Peripherals::take().unwrap();
     let sysloop = EspSystemEventLoop::take().unwrap();

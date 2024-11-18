@@ -56,8 +56,10 @@ async fn try_connect(
             .ssid
             .parse()
             .expect("Could not parse the given SSID into WiFi config"),
+        // This unfortunately can't be zeroized after use since it's owned by the configuration.
         password: network
             .password
+            .insecure()
             .parse()
             .expect("Could not parse the given password into WiFi config"),
         channel: None, // Autodiscover the channel

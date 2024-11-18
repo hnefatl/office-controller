@@ -3,6 +3,9 @@ use embedded_svc::wifi::AuthMethod;
 use serde::Deserialize;
 use std::collections::HashSet;
 
+mod secure_string;
+use secure_string::SecureString;
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub networks: Vec<WifiNetwork>,
@@ -32,12 +35,12 @@ pub struct WifiNetwork {
     pub ssid: String,
     pub auth_method: AuthMethod,
     #[serde(default)]
-    pub password: String,
+    pub password: SecureString,
 }
 #[derive(Deserialize, Debug, Clone)]
 pub struct HomeAssistantConfig {
     pub base_url: String,
-    pub access_token: String,
+    pub access_token: SecureString,
 }
 #[derive(Deserialize, Debug, Clone)]
 pub struct FlickeringGpsLed {

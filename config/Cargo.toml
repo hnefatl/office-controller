@@ -8,3 +8,4 @@ anyhow = "1.0"
 embedded-svc = { version = "0.28", features = ["use_serde"] }
 serde = "1.0"
 toml = "0.8"
+zeroize = { version = "1.8.1", features = ["derive", "serde"] }

@@ -22,10 +22,10 @@ pub fn get_entity_state<S: serde::de::DeserializeOwned>(
     })?;
     let mut client = Client::wrap(connection);
 
-    let auth_header = format!("Bearer {}", ha_config.access_token);
+    let auth_header = ha_config.access_token.map(|t| format!("Bearer {}", t));
     let headers = [
         ("content-type", "application/json"),
-        ("Authorization", &auth_header),
+        ("Authorization", auth_header.insecure()),
     ];
     let request_url = format!("{}/api/states/{}", &ha_config.base_url, entity_id);
     info!("Connecting to {}", request_url);
