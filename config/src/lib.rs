@@ -7,6 +7,7 @@ mod secure_string;
 use secure_string::SecureString;
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub networks: Vec<WifiNetwork>,
     pub home_assistant_config: HomeAssistantConfig,
@@ -31,6 +32,7 @@ impl Config {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct WifiNetwork {
     pub ssid: String,
     pub auth_method: AuthMethod,
@@ -38,11 +40,13 @@ pub struct WifiNetwork {
     pub password: SecureString,
 }
 #[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct HomeAssistantConfig {
     pub base_url: String,
     pub access_token: SecureString,
 }
 #[derive(Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct FlickeringGpsLed {
     pub entity: String,
     pub gps_zone: String,
