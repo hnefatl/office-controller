@@ -1,14 +1,8 @@
+use embassy_net::{Stack, StackResources};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use embassy_time::{Duration, Timer};
-use esp_idf_svc::{
-    eventloop::EspSystemEventLoop,
-    hal::modem::Modem,
-    nvs::EspDefaultNvsPartition,
-    sys::EspError,
-    timer::EspTaskTimerService,
-    wifi::{self, AsyncWifi, ClientConfiguration, EspWifi},
-};
 use log::{error, info, warn};
+use rand::{rngs::OsRng, Rng};
 use std::sync::Arc;
 
 #[embassy_executor::task]
@@ -19,9 +13,15 @@ pub async fn repeatedly_connect_to_wifi(
     status: Arc<WifiStatus>,
     networks: Vec<config::WifiNetwork>,
 ) -> ! {
-    let esp_wifi = EspWifi::new(modem, sysloop.clone(), nvs).unwrap();
+    let driver = WifiDriver::new(modem, sysloop.clone(), nvs).unwrap();
+    //let esp_wifi = EspWifi::new(modem, sysloop.clone(), nvs).unwrap();
     let timer = EspTaskTimerService::new().unwrap();
-    let mut wifi = AsyncWifi::wrap(esp_wifi, sysloop.clone(), timer).unwrap();
+    //let mut wifi = AsyncWifi::wrap(esp_wifi, sysloop.clone(), timer).unwrap();
+
+    let config = embassy_net::Config::dhcpv4(Default::default());
+    let stack_resources = StackResources::<3>::new();
+    let stack = Stack::new(driver, config, stack_resources, OsRng.gen());
+    esp_idf_svc::hal::tcp
 
     wifi.start().await.unwrap();
     for network in networks.iter().cycle() {

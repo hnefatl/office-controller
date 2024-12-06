@@ -1,6 +1,5 @@
 use anyhow::{bail, Result};
 use config::HomeAssistantConfig;
-use embedded_svc::http::{client::Client, Method};
 use esp_idf_svc::http::client::{Configuration, EspHttpConnection};
 use log::info;
 
@@ -20,7 +19,7 @@ pub fn get_entity_state<S: serde::de::DeserializeOwned>(
         crt_bundle_attach: Some(esp_idf_svc::sys::esp_crt_bundle_attach),
         ..Default::default()
     })?;
-    let mut client = Client::wrap(connection);
+    let mut client = HttpClient::new_with_tls(connection);
 
     let auth_header = ha_config.access_token.map(|t| format!("Bearer {}", t));
     let headers = [
@@ -29,7 +28,7 @@ pub fn get_entity_state<S: serde::de::DeserializeOwned>(
     ];
     let request_url = format!("{}/api/states/{}", &ha_config.base_url, entity_id);
     info!("Connecting to {}", request_url);
-    let request = client.request(Method::Get, &request_url, &headers)?;
+    let request = client.request(Method::GET, &request_url, &headers)?;
     let response = request.submit()?;
 
     if !(200..=299).contains(&response.status()) {

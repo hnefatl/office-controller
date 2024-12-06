@@ -1,7 +1,8 @@
-use serde::Deserialize;
+use alloc::string::String;
+use serde::{Serialize, Deserialize};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Zeroize, ZeroizeOnDrop, Deserialize, Default)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Zeroize, ZeroizeOnDrop, Serialize, Deserialize, Default)]
 pub struct SecureString(String);
 
 impl SecureString {
@@ -14,8 +15,8 @@ impl SecureString {
         self.0.as_str()
     }
 }
-impl std::fmt::Debug for SecureString {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for SecureString {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_str("\"<REDACTED>\"")
     }
 }

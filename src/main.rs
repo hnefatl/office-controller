@@ -1,14 +1,12 @@
+#![no_std]
+#![no_main]
+
+extern crate alloc;
+
 use config::FlickeringGpsLed;
 use embassy_executor::{main, Spawner};
+use embassy_net::{tcp::client::TcpClient, Stack};
 use embassy_time::Duration;
-use esp_idf_svc::{
-    eventloop::EspSystemEventLoop,
-    hal::{
-        gpio::{AnyOutputPin, Output, PinDriver},
-        prelude::*,
-    },
-    nvs::{EspCustomNvs, EspDefaultNvsPartition, EspNvsPartition, NvsCustom},
-};
 use log::{error, info};
 use std::sync::Arc;
 use wifi::WithWifiTask;
@@ -38,8 +36,12 @@ fn log_stack_watermark(name: &str) {
 
 #[main]
 async fn main(spawner: Spawner) {
-    esp_idf_svc::sys::link_patches();
-    esp_idf_svc::log::EspLogger::initialize_default();
+    let peripherals = esp_hal::init({
+        let mut config = EspConfig::default();
+        config.cpu_clock = CpuClock::max();
+        config
+    });
+
     log_stack_watermark("main");
 
     let config = load_config_or_die().unwrap();

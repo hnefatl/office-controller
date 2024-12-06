@@ -1,12 +1,15 @@
+#![no_std]
+
+extern crate alloc;
+
+use alloc::{collections::BTreeSet, string::String, vec::Vec};
 use anyhow::{bail, Result};
-use embedded_svc::wifi::AuthMethod;
-use serde::Deserialize;
-use std::collections::HashSet;
+use serde::{Serialize, Deserialize};
 
 mod secure_string;
 use secure_string::SecureString;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub networks: Vec<WifiNetwork>,
@@ -15,13 +18,14 @@ pub struct Config {
     pub flickering_gps_leds: Vec<FlickeringGpsLed>,
 }
 impl Config {
-    pub fn parse_or_panic(config_text: &str) -> Self {
-        let cfg: Self = toml::from_str(config_text).expect("Failed to parse deployment config");
+    pub fn parse_or_panic(config_bytes: &[u8]) -> Self {
+        let cfg: Self =
+            postcard::from_bytes(config_bytes).expect("Failed to parse deployment config");
         cfg.validate().unwrap();
         return cfg;
     }
     fn validate(&self) -> Result<()> {
-        let mut seen_gpio_pins = HashSet::<i32>::new();
+        let mut seen_gpio_pins = BTreeSet::<i32>::new();
         for cfg in &self.flickering_gps_leds {
             if !seen_gpio_pins.insert(cfg.gpio_pin) {
                 bail!("Pin '{}' configured multiple times.", cfg.gpio_pin);
@@ -31,21 +35,20 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct WifiNetwork {
     pub ssid: String,
-    pub auth_method: AuthMethod,
     #[serde(default)]
     pub password: SecureString,
 }
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct HomeAssistantConfig {
     pub base_url: String,
     pub access_token: SecureString,
 }
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct FlickeringGpsLed {
     pub entity: String,

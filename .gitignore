@@ -4,4 +4,4 @@
 esp-idf/
 
 # Contains configuration credentials
-deployment_config.toml
+deployment_config.*

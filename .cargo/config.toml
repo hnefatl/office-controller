@@ -1,13 +1,14 @@
 [build]
-target = "xtensa-esp32-espidf"
+target = "riscv32imc-unknown-none-elf"
 
-[target.xtensa-esp32-espidf]
-linker = "ldproxy"
+[target.riscv32imc-unknown-none-elf]
 runner = "./flash_all.sh"
-rustflags = [ "--cfg",  "espidf_time64"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
+rustflags = ["-C", "link-arg=-Tlinkall.x"]
+#rustflags = [ "--cfg",  "espidf_time64"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
+
 
 [unstable]
-build-std = ["std", "panic_abort"]
+build-std = ["core", "alloc"]
 
 [env]
 MCU="esp32"
