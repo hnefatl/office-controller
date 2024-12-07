@@ -1,10 +1,10 @@
 [build]
-target = "riscv32imc-unknown-none-elf"
+#target = "riscv32imc-unknown-none-elf"
+target = "xtensa-esp32-none-elf"
 
 [target.riscv32imc-unknown-none-elf]
 runner = "./flash_all.sh"
 rustflags = ["-C", "link-arg=-Tlinkall.x"]
-#rustflags = [ "--cfg",  "espidf_time64"] # Extending time_t for ESP IDF 5: https://github.com/esp-rs/rust/issues/110
 
 
 [unstable]

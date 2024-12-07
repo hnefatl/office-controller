@@ -4,7 +4,7 @@ extern crate alloc;
 
 use alloc::{collections::BTreeSet, string::String, vec::Vec};
 use anyhow::{bail, Result};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 mod secure_string;
 use secure_string::SecureString;
@@ -39,6 +39,7 @@ impl Config {
 #[serde(deny_unknown_fields)]
 pub struct WifiNetwork {
     pub ssid: String,
+    pub auth_method: AuthMethod,
     #[serde(default)]
     pub password: SecureString,
 }
@@ -56,4 +57,14 @@ pub struct FlickeringGpsLed {
     pub gpio_pin: i32,
     pub min_brightness: f32,
     pub max_brightness: f32,
+}
+
+/// A copy of `esp_wifi::wifi::AuthMethod` to avoid pulling in all the dependencies:
+/// we need to cross-compile to xtensa for the `esp32` feature of `esp-wifi` to work,
+/// but then we can't use this libary as part of the `build.rs` non-cross-compiled
+/// build.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub enum AuthMethod {
+    None,
+    WPA2Personal,
 }

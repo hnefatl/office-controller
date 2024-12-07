@@ -23,9 +23,20 @@ opt-level = "z"
 log = "0.4"
 esp-hal = { version = "0.22", features = ["esp32"] }
 esp-hal-embassy = { version = "0.5", features = ["esp32", "executors"] }
-esp-wifi = { version = "0.11", features = ["esp32", "wifi", "esp-alloc"] }
+esp-wifi = { version = "0.11", features = [
+    "esp32",
+    "wifi",
+    "esp-alloc",
+    "serde",
+] }
 esp-alloc = "0.5"
 esp-storage = { version = "0.4", features = ["esp32"] }
+esp-println = { version = "0.12", features = ["esp32", "log"] }
+esp-backtrace = { version = "0.14", features = [
+    "esp32",
+    "panic-handler",
+    "println",
+] }
 
 # Required until https://github.com/esp-rs/esp-hal/pull/2357 makes it into a version, to get spin-lock-free xtensa-lx.
 # Bump esp-hal version at that time.
@@ -53,16 +64,19 @@ embassy-net = { version = "0.4", features = [
     "dhcpv4-hostname",
     "proto-ipv4",
 ] }
+embedded-storage = "0.3"
+embedded-io = { version = "0.6", features = ["alloc"] }
+embedded-io-adapters = { version = "0.6" }
+
 anyhow = { version = "1.0", default-features = false }
 serde = { version = "1.0", default-features = false, features = [
     "derive",
     "alloc",
 ] }
-embedded-io = { version = "0.6", features = ["alloc"] }
-embedded-io-adapters = { version = "0.6" }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
-zeroize = { version = "1.8.1", features = ["derive"] }
+zeroize = { version = "1.8.1", features = ["derive", "serde"] }
 rand = { version = "0.8.5", default-features = false, features = ["alloc"] }
+static_cell = "2.1.0"
 config = { path = "config" }
 
 [profile.dev.package.esp-hal]
