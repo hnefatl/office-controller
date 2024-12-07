@@ -1,7 +1,8 @@
 **/.embuild
 **/target
 **/Cargo.lock
-esp-idf/
+
+.venv/
 
 # Contains configuration credentials
 deployment_config.*

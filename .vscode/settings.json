@@ -4,6 +4,7 @@
         "**/target": true,
         "**/Cargo.lock": true,
         "esp-idf/": true,
+        ".venv/": true,
     },
     "git.ignoredRepositories": [
         "./esp-idf",

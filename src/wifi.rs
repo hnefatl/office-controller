@@ -20,7 +20,7 @@ use static_cell::StaticCell;
 
 type Stack = embassy_net::Stack<esp_wifi::wifi::WifiDevice<'static, WifiStaDevice>>;
 
-const NUM_SOCKETS: usize = 5;
+const NUM_SOCKETS: usize = 2;
 
 fn parse_auth_method(a: config::AuthMethod) -> esp_wifi::wifi::AuthMethod {
     match a {
@@ -30,7 +30,7 @@ fn parse_auth_method(a: config::AuthMethod) -> esp_wifi::wifi::AuthMethod {
 }
 
 pub fn init_and_spawn_tasks<T: EspWifiTimerSource>(
-    spawner: Spawner,
+    spawner: &Spawner,
     timer: impl Peripheral<P = T> + 'static,
     rng: Rng,
     wifi: WIFI,
@@ -79,6 +79,7 @@ fn init<T: EspWifiTimerSource>(
         stack_resources,
         rng.next_u64(),
     ));
+    wifi_controller.start().unwrap();
     (stack, wifi_controller)
 }
 
@@ -116,10 +117,9 @@ async fn try_connect(
     // Start fresh if already connected.
     if esp_wifi::wifi::wifi_state() == WifiState::StaConnected {
         warn!("Already connected, disconnecting");
-        controller.disconnect_async().await;
+        controller.disconnect_async().await?;
     }
 
-    info!("Attempting connection to WiFi SSID '{}'", network.ssid);
     controller.set_configuration(&Configuration::Client(ClientConfiguration {
         ssid: network
             .ssid
@@ -135,7 +135,9 @@ async fn try_connect(
         auth_method: parse_auth_method(network.auth_method),
         ..Default::default()
     }))?;
-    controller.connect_async().await?;
+    info!("Attempting connection to WiFi SSID '{}'", network.ssid);
+    //controller.connect_async().await?;
+    controller.connect()?;
     Ok(())
 }
 

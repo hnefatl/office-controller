@@ -11,29 +11,43 @@ rust-version = "1.77"
 name = "office-controller"
 harness = false            # do not use the built in cargo test harness -> resolve rust-analyzer errors
 
-[profile.release]
+[profile.dev]
+# Rust debug is too slow.
+# For debug builds always builds with some optimization
 opt-level = "s"
 
-[profile.dev]
-debug = true    # Symbols are nice and they don't increase the size on Flash
-opt-level = "z"
+[profile.release]
+codegen-units = 1        # LLVM can perform better optimizations using a single thread
+debug = 2
+debug-assertions = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false
 
 
 [dependencies]
 log = "0.4"
 esp-hal = { version = "0.22", features = ["esp32"] }
-esp-hal-embassy = { version = "0.5", features = ["esp32", "executors"] }
+esp-hal-embassy = { version = "0.5", features = [
+    "esp32",
+    "executors",
+    "integrated-timers",
+    "log",
+] }
 esp-wifi = { version = "0.11", features = [
     "esp32",
     "wifi",
     "esp-alloc",
     "serde",
+    "log",
 ] }
 esp-alloc = "0.5"
 esp-storage = { version = "0.4", features = ["esp32"] }
 esp-println = { version = "0.12", features = ["esp32", "log"] }
 esp-backtrace = { version = "0.14", features = [
     "esp32",
+    "exception-handler",
     "panic-handler",
     "println",
 ] }
@@ -51,7 +65,7 @@ heapless = { version = "0.8.0", features = [
 ] }
 
 embassy-executor = { version = "0.6", features = [
-    "task-arena-size-64",
+    "task-arena-size-4096",
     "executor-thread",
     "integrated-timers",
     "log",
@@ -81,13 +95,18 @@ config = { path = "config" }
 
 [profile.dev.package.esp-hal]
 opt-level = 3
+[profile.release.package.esp-hal]
+opt-level = 3
 [profile.dev.package.esp-storage]
+opt-level = 3
+[profile.release.package.esp-storage]
 opt-level = 3
 [profile.dev.package.esp-wifi]
 opt-level = 3
+[profile.release.package.esp-wifi]
+opt-level = 3
 
 [build-dependencies]
-embuild = "0.32.0"
 toml = "0.8"
 postcard = { version = "1.1", features = ["alloc"] }
 config = { path = "config" }

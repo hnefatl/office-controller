@@ -8,7 +8,7 @@ use config::FlickeringGpsLed;
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use embedded_storage::ReadStorage;
-use esp_alloc::heap_allocator;
+use esp_alloc::{heap_allocator, psram_allocator};
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
@@ -23,12 +23,12 @@ use wifi::WithWifiTask;
 //mod homeassistant;
 mod wifi;
 
-const HEAP_MEMORY_SIZE: usize = 20 * 1024;
+const HEAP_MEMORY_SIZE: usize = 128 * 1024;
 
 fn load_config_or_die() -> Result<config::Config, esp_storage::FlashStorageError> {
     let mut flash = FlashStorage::new();
-    let config_partition_base_offset = 0x7000u32;
-    let mut buffer = [0u8; 0x3000];
+    let config_partition_base_offset = 0x9000;
+    let mut buffer = [0u8; 0x1000];
     flash.read(config_partition_base_offset, &mut buffer)?;
 
     Ok(config::Config::parse_or_panic(&buffer))
@@ -36,11 +36,11 @@ fn load_config_or_die() -> Result<config::Config, esp_storage::FlashStorageError
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
+    heap_allocator!(HEAP_MEMORY_SIZE);
+    esp_println::logger::init_logger(log::LevelFilter::Info);
     let mut esp_config = esp_hal::Config::default();
     esp_config.cpu_clock = CpuClock::max();
     let peripherals = esp_hal::init(esp_config);
-
-    heap_allocator!(HEAP_MEMORY_SIZE);
 
     let tg0 = TimerGroup::new(peripherals.TIMG0);
     esp_hal_embassy::init(tg0.timer0);
@@ -50,7 +50,7 @@ async fn main(spawner: Spawner) {
 
     let rng = Rng::new(peripherals.RNG);
     let wifi_status = wifi::init_and_spawn_tasks(
-        spawner,
+        &spawner,
         tg0.timer1,
         rng,
         peripherals.WIFI,

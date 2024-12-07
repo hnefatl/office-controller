@@ -1,4 +1,7 @@
 fn main() {
+    println!("cargo:rustc-link-arg-bins=-Tlinkall.x");
+    //println!("cargo:rustc-link-arg-bins=-Trom_functions.x");
+
     // Parse and dump the nice (std) toml-format config to a binary (no_std) format.
     let config: config::Config = toml::from_str(include_str!("deployment_config.toml")).unwrap();
     let config_bytes = postcard::to_allocvec(&config).unwrap();

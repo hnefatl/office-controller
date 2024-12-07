@@ -1,9 +1,6 @@
 # Based off https://github.com/esp-rs/esp-idf-sys/blob/master/partitions.csv
 # Using https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-guides/partition-tables.html
 #
-# Name,   Type, SubType, Offset,  Size,   Flags
-nvs,      data, nvs,     ,        0x6000,
-phy_init, data, phy,     ,        0x1000,
-# The size here comes from `flash_config.sh`.
-config,   data, nvs,     ,        0x3000,
-factory,  app,  factory, ,        3M,
+# Name,   Type, SubType,   Offset,  Size,   Flags
+config,   data, undefined, ,        0x1000,
+factory,  app,  factory,   ,        3M,
